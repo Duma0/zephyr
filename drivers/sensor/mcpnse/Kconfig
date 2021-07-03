@@ -1,0 +1,20 @@
+# MCPNSE temperature sensor configuration options
+
+menuconfig MCPNSE
+	bool "MCPNSE temperature sensor"
+	depends on I2C
+	help
+	  Enable driver for MCPNSE temperature sensor.
+
+if MCPNSE
+config MCPNSE_THREAD_STACK_SIZE
+	int "Sensor delayed work thread stack size"
+	depends on MCPNSE_TRIGGER_OWN_THREAD
+	default 1024
+
+config MCPNSE_THREAD_PRIORITY
+	int "MCPNSE thread priority"
+	depends on MCPNSE_TRIGGER_OWN_THREAD
+	default 10
+
+endif # MCPNSE

@@ -1,0 +1,9 @@
+sample:
+  name: MCPNSE Temperature Sensor
+tests:
+  sample.sensor.mcpnse:
+    harness: sensor
+    tags: sensors
+    depends_on: i2c
+    filter: dt_compat_enabled("microchip,mcpnse")
+
