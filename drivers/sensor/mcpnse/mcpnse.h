@@ -1,10 +1,3 @@
-/*
- * Copyright (c) 2019 Peter Bigot Consulting, LLC
- * Copyright (c) 2016 Intel Corporation
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 #ifndef ZEPHYR_DRIVERS_SENSOR_MCPNSE_MCPNSE_H_
 #define ZEPHYR_DRIVERS_SENSOR_MCPNSE_MCPNSE_H_
 
@@ -69,40 +62,6 @@ struct mcpnse_config {
 	uint8_t resolution;
 };
 
-int mcpnse_reg_read(const struct device *dev, uint8_t reg, uint16_t *val);
-int mcpnse_reg_write_16bit(const struct device *dev, uint8_t reg,
-			    uint16_t val);
-int mcpnse_reg_write_8bit(const struct device *dev, uint8_t reg,
-			   uint8_t val);
 
-/* Encode a signed temperature in scaled Celsius to the format used in
- * register values.
- */
-static inline uint16_t mcpnse_temp_reg_from_signed(int temp)
-{
-	/* Get the 12-bit 2s complement value */
-	uint16_t rv = temp & MCPNSE_TEMP_ABS_MASK;
-
-	if (temp < 0) {
-		rv |= MCPNSE_TEMP_SIGN_BIT;
-	}
-	return rv;
-}
-
-/* Decode a register temperature value to a signed temperature in
- * scaled Celsius.
- */
-static inline int mcpnse_temp_signed_from_reg(uint16_t reg)
-{
-	int rv = reg & MCPNSE_TEMP_ABS_MASK;
-
-	if (reg & MCPNSE_TEMP_SIGN_BIT) {
-		/* Convert 12-bit 2s complement to signed negative
-		 * value.
-		 */
-		rv = -(1U + (rv ^ MCPNSE_TEMP_ABS_MASK));
-	}
-	return rv;
-}
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_MCPNSE_MCPNSE_H_ */

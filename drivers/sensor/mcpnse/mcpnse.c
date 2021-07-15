@@ -1,10 +1,3 @@
-/*
- * Copyright (c) 2019 Peter Bigot Consulting, LLC
- * Copyright (c) 2016 Intel Corporation
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 #define DT_DRV_COMPAT microchip,mcpnse
 
 #include <errno.h>
@@ -19,6 +12,36 @@
 #include "mcpnse.h"
 
 LOG_MODULE_REGISTER(MCPNSE, CONFIG_SENSOR_LOG_LEVEL);
+
+/* Encode a signed temperature in scaled Celsius to the format used in
+ * register values.
+ */
+static inline uint16_t mcpnse_temp_reg_from_signed(int temp)
+{
+	/* Get the 12-bit 2s complement value */
+	uint16_t rv = temp & MCPNSE_TEMP_ABS_MASK;
+
+	if (temp < 0) {
+		rv |= MCPNSE_TEMP_SIGN_BIT;
+	}
+	return rv;
+}
+
+/* Decode a register temperature value to a signed temperature in
+ * scaled Celsius.
+ */
+static inline int mcpnse_temp_signed_from_reg(uint16_t reg)
+{
+	int rv = reg & MCPNSE_TEMP_ABS_MASK;
+
+	if (reg & MCPNSE_TEMP_SIGN_BIT) {
+		/* Convert 12-bit 2s complement to signed negative
+		 * value.
+		 */
+		rv = -(1U + (rv ^ MCPNSE_TEMP_ABS_MASK));
+	}
+	return rv;
+}
 
 int mcpnse_reg_read(const struct device *dev, uint8_t reg, uint16_t *val)
 {
@@ -73,9 +96,12 @@ static int mcpnse_sample_fetch(const struct device *dev,
 {
 	struct mcpnse_data *data = dev->data;
 
-	__ASSERT_NO_MSG(chan == SENSOR_CHAN_ALL || chan == SENSOR_CHAN_AMBIENT_TEMP);
-
-	return mcpnse_reg_read(dev, MCPNSE_REG_TEMP_AMB, &data->reg_val);
+	if(chan == SENSOR_CHAN_ALL || chan == SENSOR_CHAN_AMBIENT_TEMP) {
+		return mcpnse_reg_read(dev, MCPNSE_REG_TEMP_AMB, &data->reg_val);
+	} else {
+		LOG_ERR("Channel not supported");
+		return EINVAL;
+	}
 }
 
 static int mcpnse_channel_get(const struct device *dev,
@@ -85,13 +111,18 @@ static int mcpnse_channel_get(const struct device *dev,
 	const struct mcpnse_data *data = dev->data;
 	int temp = mcpnse_temp_signed_from_reg(data->reg_val);
 
-	__ASSERT_NO_MSG(chan == SENSOR_CHAN_AMBIENT_TEMP);
 
-	val->val1 = temp / MCPNSE_TEMP_SCALE_CEL;
-	temp -= val->val1 * MCPNSE_TEMP_SCALE_CEL;
-	val->val2 = (temp * 1000000) / MCPNSE_TEMP_SCALE_CEL;
+	if(chan == SENSOR_CHAN_AMBIENT_TEMP) {
+		val->val1 = temp / MCPNSE_TEMP_SCALE_CEL;
+		temp -= val->val1 * MCPNSE_TEMP_SCALE_CEL;
+		val->val2 = (temp * 1000000) / MCPNSE_TEMP_SCALE_CEL;
 
-	return 0;
+		return 0;
+	} else {
+		LOG_ERR("Channel not supported");
+		return EINVAL;
+	}
+		
 }
 
 static const struct sensor_driver_api mcpnse_api_funcs = {
